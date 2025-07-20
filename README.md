@@ -1,9 +1,9 @@
 # PDF Text Extractor API
 
-Simple Node.js REST API to extract text from PDF by URL or Base64.
+Node.js REST API to extract text from PDF files.  
+- First tries to parse text using pdfjs-dist.
+- If parsing fails, uses OCR (tesseract.js) to extract text from page images.
 
-## How to run
-
+## Install
 ```bash
 npm install
-npm start

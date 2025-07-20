@@ -6,19 +6,37 @@ const { createCanvas } = require('canvas');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 
+class NodeCanvasFactory {
+  create(width, height) {
+    const canvas = createCanvas(width, height);
+    const context = canvas.getContext('2d');
+    return { canvas, context };
+  }
+  reset(canvasAndContext, width, height) {
+    canvasAndContext.canvas.width = width;
+    canvasAndContext.canvas.height = height;
+  }
+  destroy(canvasAndContext) {
+    canvasAndContext.canvas.width = 0;
+    canvasAndContext.canvas.height = 0;
+    canvasAndContext.canvas = null;
+    canvasAndContext.context = null;
+  }
+}
+
 app.post('/extract-text', async (req, res) => {
   if (!req.body.pdf_base64) {
     return res.status(400).json({ error: 'Missing pdf_base64 field' });
   }
 
+  const pdfData = Buffer.from(req.body.pdf_base64, 'base64');
+
   try {
-    const pdfData = Buffer.from(req.body.pdf_base64, 'base64');
+    // محاولة parsing عادي
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
     const pdf = await loadingTask.promise;
 
     let text = '';
-
-    // Try normal parsing
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const content = await page.getTextContent();
@@ -28,39 +46,36 @@ app.post('/extract-text', async (req, res) => {
     if (text.trim()) {
       return res.json({ text });
     } else {
-      throw new Error('No text found, fallback to OCR');
+      throw new Error("Parsed text is empty, try OCR");
     }
 
-  } catch (err) {
-    console.log('Normal parsing failed:', err.message);
-    // Try OCR fallback
+  } catch (parseErr) {
+    console.warn('PDF parse failed, fallback to OCR:', parseErr.toString());
+
     try {
-      const pdfData = Buffer.from(req.body.pdf_base64, 'base64');
+      // fallback OCR: نحول أول صفحة صورة + OCR
       const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
       const pdf = await loadingTask.promise;
-
-      // Render first page to image
       const page = await pdf.getPage(1);
+
       const viewport = page.getViewport({ scale: 2.0 });
-      const canvas = createCanvas(viewport.width, viewport.height);
-      const context = canvas.getContext('2d');
-
-      await page.render({
-        canvasContext: context,
+      const canvasFactory = new NodeCanvasFactory();
+      const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
+      const renderContext = {
+        canvasContext: canvasAndContext.context,
         viewport: viewport,
-      }).promise;
+        canvasFactory: canvasFactory
+      };
+      await page.render(renderContext).promise;
 
-      const imageBuffer = canvas.toBuffer('image/png');
+      const image = canvasAndContext.canvas.toBuffer();
 
-      const result = await Tesseract.recognize(imageBuffer, 'eng', {
-        logger: m => console.log(m),
-      });
-
-      return res.json({ text: result.data.text || 'OCR fallback found nothing' });
+      const { data: { text: ocrText } } = await Tesseract.recognize(image, 'eng');
+      return res.json({ text: ocrText || 'OCR could not extract text' });
 
     } catch (ocrErr) {
-      console.error('OCR fallback failed:', ocrErr.message);
-      return res.json({ text: 'Could not parse PDF: both parsing and OCR failed.' });
+      console.error('OCR failed:', ocrErr.toString());
+      return res.json({ text: 'Could not parse PDF text (maybe file is corrupted or unsupported structure)' });
     }
   }
 });

@@ -21,10 +21,11 @@ app.post('/extract-text', async (req, res) => {
             text += content.items.map(item => item.str).join(' ') + '\n';
         }
 
-        res.json({ text });
+        res.json({ text: text || 'PDF is empty or unreadable' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to extract text', details: err.toString() });
+        console.error('Error while parsing PDF:', err.toString());
+        // fallback: رجّع رسالة بدل ما تعمل error
+        res.json({ text: 'Could not parse PDF text (maybe file is corrupted or unsupported structure)' });
     }
 });
 

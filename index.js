@@ -30,53 +30,51 @@ app.post('/extract-text', async (req, res) => {
   }
 
   const pdfData = Buffer.from(req.body.pdf_base64, 'base64');
+  let allText = '';
 
   try {
-    // محاولة parsing عادي
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
     const pdf = await loadingTask.promise;
 
-    let text = '';
+    console.log(`PDF has ${pdf.numPages} pages`);
+
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const content = await page.getTextContent();
-      text += content.items.map(item => item.str).join(' ') + '\n';
+      try {
+        console.log(`Parsing page ${pageNum}...`);
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        const text = content.items.map(item => item.str).join(' ');
+        allText += text + '\n';
+
+        if (!text.trim()) {
+          // Fallback OCR for empty page
+          console.log(`Page ${pageNum} empty, trying OCR...`);
+          const viewport = page.getViewport({ scale: 2.0 });
+          const canvasFactory = new NodeCanvasFactory();
+          const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
+          const renderContext = {
+            canvasContext: canvasAndContext.context,
+            viewport: viewport,
+            canvasFactory: canvasFactory
+          };
+          await page.render(renderContext).promise;
+
+          const image = canvasAndContext.canvas.toBuffer();
+          const { data: { text: ocrText } } = await Tesseract.recognize(image, 'eng');
+          allText += ocrText + '\n';
+        }
+
+      } catch (pageErr) {
+        console.warn(`Failed to parse page ${pageNum}:`, pageErr.toString());
+        allText += `\n[Failed to parse page ${pageNum}]\n`;
+      }
     }
 
-    if (text.trim()) {
-      return res.json({ text });
-    } else {
-      throw new Error("Parsed text is empty, try OCR");
-    }
+    return res.json({ text: allText || 'Could not extract text' });
 
-  } catch (parseErr) {
-    console.warn('PDF parse failed, fallback to OCR:', parseErr.toString());
-
-    try {
-      // fallback OCR: نحول أول صفحة صورة + OCR
-      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-
-      const viewport = page.getViewport({ scale: 2.0 });
-      const canvasFactory = new NodeCanvasFactory();
-      const canvasAndContext = canvasFactory.create(viewport.width, viewport.height);
-      const renderContext = {
-        canvasContext: canvasAndContext.context,
-        viewport: viewport,
-        canvasFactory: canvasFactory
-      };
-      await page.render(renderContext).promise;
-
-      const image = canvasAndContext.canvas.toBuffer();
-
-      const { data: { text: ocrText } } = await Tesseract.recognize(image, 'eng');
-      return res.json({ text: ocrText || 'OCR could not extract text' });
-
-    } catch (ocrErr) {
-      console.error('OCR failed:', ocrErr.toString());
-      return res.json({ text: 'Could not parse PDF text (maybe file is corrupted or unsupported structure)' });
-    }
+  } catch (err) {
+    console.error('Failed to process PDF:', err.toString());
+    return res.json({ text: 'Could not parse PDF at all' });
   }
 });
 

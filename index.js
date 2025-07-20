@@ -11,7 +11,7 @@ app.post('/extract-text', async (req, res) => {
 
     try {
         const pdfData = Buffer.from(req.body.pdf_base64, 'base64');
-        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
         const pdf = await loadingTask.promise;
 
         let text = '';

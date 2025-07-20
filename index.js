@@ -1,34 +1,32 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-const pdfParse = require('pdf-parse');
+const PDFParser = require('pdf2json');
 
 const app = express();
-app.use(bodyParser.json({ limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
 
-app.post('/extract-text', async (req, res) => {
-    try {
-        let pdfBuffer;
-        if (req.body.pdf_url) {
-            const response = await axios.get(req.body.pdf_url, { 
-                responseType: 'arraybuffer', 
-                httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }) 
-            });
-            pdfBuffer = response.data;
-        } else if (req.body.pdf_base64) {
-            pdfBuffer = Buffer.from(req.body.pdf_base64, 'base64');
-        } else {
-            return res.status(400).json({ error: 'Please provide pdf_url or pdf_base64' });
-        }
-
-        const data = await pdfParse(pdfBuffer);
-        res.json({ text: data.text });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to extract text', details: err.toString() });
+app.post('/extract-text', (req, res) => {
+    if (!req.body.pdf_base64) {
+        return res.status(400).json({ error: 'Missing pdf_base64 field' });
     }
+
+    const pdfBuffer = Buffer.from(req.body.pdf_base64, 'base64');
+    const pdfParser = new PDFParser();
+
+    pdfParser.on("pdfParser_dataError", errData =>
+        res.status(500).json({ error: 'Failed to parse PDF', details: errData.parserError })
+    );
+
+    pdfParser.on("pdfParser_dataReady", pdfData => {
+        const text = pdfData.formImage.Pages.map(page =>
+            page.Texts.map(t =>
+                decodeURIComponent(t.R.map(r => r.T).join(''))
+            ).join(' ')
+        ).join('\n');
+        res.json({ text });
+    });
+
+    pdfParser.parseBuffer(pdfBuffer);
 });
 
-// Use PORT from environment (needed by Render)
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log('PDF Text Extractor API running on port ${PORT}'));
+app.listen(PORT, () => console.log(`PDF Text Extractor API running on port ${PORT}`));

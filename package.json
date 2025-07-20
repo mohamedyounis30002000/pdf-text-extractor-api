@@ -1,15 +1,12 @@
 {
-  "name": "pdf-text-extractor-api",
+  "name": "pdf-ocr-api",
   "version": "1.0.0",
-  "description": "Node.js REST API to extract text from PDF with fallback OCR page by page",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "pdfjs-dist": "^3.11.174",
-    "tesseract.js": "^4.0.2",
-    "canvas": "^2.11.2"
+    "tesseract.js": "^4.0.2"
   }
 }

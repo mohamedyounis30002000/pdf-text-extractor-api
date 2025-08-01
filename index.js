@@ -39,6 +39,18 @@ app.post('/extract-text', async (req, res) => {
 
     res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
+  } finally {
+    // ✅ تنظيف الملفات المؤقتة من /tmp
+    try {
+      if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
+
+      // امسح كمان الصور اللي بيكون اسمها page-1.png, page-2.png إلخ لو كنت بتستخدم OCR
+      const tmpFiles = fs.readdirSync('/tmp').filter(f => f.startsWith('page') && f.endsWith('.png'));
+      tmpFiles.forEach(f => {
+        const filePath = path.join('/tmp', f);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+
   } catch (err) {
     console.error('Error:', err.toString());
     res.status(500).json({ error: 'Failed to process PDF', details: err.toString() });

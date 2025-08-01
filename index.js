@@ -13,6 +13,10 @@ app.post('/extract-text', async (req, res) => {
   }
 
   try {
+let fullText = "hiiiiiiiii";
+    res.json({ text: fullText.trim() || 'OCR could not extract text' });
+
+    // res.json({ text: fullText.trim() || 'OCR could not extract text' });
     // احفظ الـ PDF مؤقتًا
     // const tempPdf = path.join('/tmp', 'file.pdf');
     // fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));

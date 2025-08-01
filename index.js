@@ -17,7 +17,7 @@ app.post('/extract-text', async (req, res) => {
     const tempPdf = path.join('/tmp', 'file.pdf');
     fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
 
-    // حوّل كل الصفحات لصور PNG
+    // حول كل الصفحات لصور
     await new Promise((resolve, reject) => {
       exec(`pdftoppm "${tempPdf}" "/tmp/page" -png`, (err) => {
         if (err) reject(err);
@@ -25,21 +25,17 @@ app.post('/extract-text', async (req, res) => {
       });
     });
 
-    // اقرأ كل الصور اللي اتولدت
-    let imageFiles = fs.readdirSync('/tmp')
-      .filter(file => file.startsWith('page') && file.endsWith('.png'))
-      .sort();
+    // اقرأ الصور الناتجة
+    const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
+    files.sort(); // تأكد إن الصور بترتيب الصفحات
 
-    // OCR لكل صورة في نفس الوقت
-    const ocrPromises = imageFiles.map((file, index) => {
+    // OCR لكل صورة
+    let fullText = '';
+    for (const file of files) {
       const imagePath = path.join('/tmp', file);
-      return Tesseract.recognize(imagePath, 'eng').then(result => {
-        return `\n\n--- Page ${index + 1} ---\n\n` + result.data.text;
-      });
-    });
-
-    const results = await Promise.all(ocrPromises);
-    const fullText = results.join('\n');
+      const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+      fullText += `\n\n--- Page ${file} ---\n\n` + text;
+    }
 
     res.json({ text: fullText.trim() || 'OCR could not extract text' });
 

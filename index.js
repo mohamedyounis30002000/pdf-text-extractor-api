@@ -14,11 +14,9 @@ app.post('/extract-text', async (req, res) => {
 
   try {
 
-let fullText = "hiiiiiiiii";
     //احفظ الـ PDF مؤقتًا
     const tempPdf = path.join('/tmp', 'file.pdf');
     fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
-     fullText += "to png";
     //حول كل الصفحات لصور
     await new Promise((resolve, reject) => {
       exec(`pdftoppm "${tempPdf}" "/tmp/page" -png`, (err) => {
@@ -27,24 +25,19 @@ let fullText = "hiiiiiiiii";
       });
     });
 
-     
-    
-
     // اقرأ الصور الناتجة
     const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
     files.sort(); // تأكد إن الصور بترتيب الصفحات
-    fullText += "Read";
-    res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
-    // // OCR لكل صورة
+    // OCR لكل صورة
     // let fullText = '';
-    // for (const file of files) {
-    //   const imagePath = path.join('/tmp', file);
-    //   const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
-    //   fullText += `\n\n--- Page ${file} ---\n\n` + text;
-    // }
+    for (const file of files) {
+      const imagePath = path.join('/tmp', file);
+      const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+      fullText += `\n\n--- Page ${file} ---\n\n` + text;
+    }
 
-    // res.json({ text: fullText.trim() || 'OCR could not extract text' });
+    res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
   } catch (err) {
     console.error('Error:', err.toString());

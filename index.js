@@ -12,12 +12,14 @@ app.post('/extract-text', async (req, res) => {
     return res.status(400).json({ error: 'Missing pdf_base64 field' });
   }
 
-  try {
+  const tempPdf = path.join('/tmp', 'file.pdf');
+  let files = [];
 
-    //احفظ الـ PDF مؤقتًا
-    const tempPdf = path.join('/tmp', 'file.pdf');
+  try {
+    // احفظ الـ PDF مؤقتًا
     fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
-    //حول كل الصفحات لصور
+
+    // حول كل الصفحات لصور
     await new Promise((resolve, reject) => {
       exec(`pdftoppm "${tempPdf}" "/tmp/page" -png`, (err) => {
         if (err) reject(err);
@@ -26,7 +28,7 @@ app.post('/extract-text', async (req, res) => {
     });
 
     // اقرأ الصور الناتجة
-    const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
+    files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
     files.sort(); // تأكد إن الصور بترتيب الصفحات
 
     // OCR لكل صورة
@@ -39,21 +41,25 @@ app.post('/extract-text', async (req, res) => {
 
     res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
-  } finally {
-    // ✅ تنظيف الملفات المؤقتة من /tmp
-    try {
-      if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
-
-      // امسح كمان الصور اللي بيكون اسمها page-1.png, page-2.png إلخ لو كنت بتستخدم OCR
-      const tmpFiles = fs.readdirSync('/tmp').filter(f => f.startsWith('page') && f.endsWith('.png'));
-      tmpFiles.forEach(f => {
-        const filePath = path.join('/tmp', f);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      });
-
   } catch (err) {
     console.error('Error:', err.toString());
     res.status(500).json({ error: 'Failed to process PDF', details: err.toString() });
+
+  } finally {
+    // تنظيف الملفات المؤقتة
+    try {
+      if (fs.existsSync(tempPdf)) {
+        fs.unlinkSync(tempPdf);
+      }
+      for (const file of files) {
+        const filePath = path.join('/tmp', file);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    } catch (cleanupErr) {
+      console.error('Error cleaning up temp files:', cleanupErr.toString());
+    }
   }
 });
 

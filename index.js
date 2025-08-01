@@ -14,8 +14,8 @@ app.post('/extract-text', async (req, res) => {
 
   try {
     // احفظ الـ PDF مؤقتًا
-    const tempPdf = path.join('/tmp', 'file.pdf');
-    fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
+    // const tempPdf = path.join('/tmp', 'file.pdf');
+    // fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
 
     // حول كل الصفحات لصور
     // await new Promise((resolve, reject) => {

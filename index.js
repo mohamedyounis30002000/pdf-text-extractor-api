@@ -18,15 +18,15 @@ app.post('/extract-text', async (req, res) => {
     fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
 
     // حول كل الصفحات لصور
-    await new Promise((resolve, reject) => {
-      exec(`pdftoppm "${tempPdf}" "/tmp/page" -png`, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    // await new Promise((resolve, reject) => {
+    //   exec(`pdftoppm "${tempPdf}" "/tmp/page" -png`, (err) => {
+    //     if (err) reject(err);
+    //     else resolve();
+    //   });
+    // });
 
     // اقرأ الصور الناتجة
-    const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
+    // const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
     // files.sort(); // تأكد إن الصور بترتيب الصفحات
 
     // // OCR لكل صورة

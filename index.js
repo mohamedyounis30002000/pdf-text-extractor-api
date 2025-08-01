@@ -28,11 +28,13 @@ let fullText = "hiiiiiiiii";
     });
 
      
-    res.json({ text: fullText.trim() || 'OCR could not extract text' });
+    
 
     // اقرأ الصور الناتجة
-    // const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
-    // files.sort(); // تأكد إن الصور بترتيب الصفحات
+    const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
+    files.sort(); // تأكد إن الصور بترتيب الصفحات
+    fullText += "Read";
+    res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
     // // OCR لكل صورة
     // let fullText = '';

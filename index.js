@@ -30,7 +30,7 @@ app.post('/extract-text', async (req, res) => {
     files.sort(); // تأكد إن الصور بترتيب الصفحات
 
     // OCR لكل صورة
-    // let fullText = '';
+    let fullText = '';
     for (const file of files) {
       const imagePath = path.join('/tmp', file);
       const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');

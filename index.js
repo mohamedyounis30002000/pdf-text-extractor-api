@@ -48,18 +48,12 @@ app.post('/extract-text', async (req, res) => {
   } finally {
     // تنظيف الملفات المؤقتة
     try {
-      if (fs.existsSync(tempPdf)) {
-        fs.unlinkSync(tempPdf);
-      }
-      for (const file of files) {
-        const filePath = path.join('/tmp', file);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      }
-    } catch (cleanupErr) {
-      console.error('Error cleaning up temp files:', cleanupErr.toString());
-    }
+    exec('rm -rf /tmp/*', (err) => {
+      if (err) console.error('Failed to clean /tmp:', err);
+    });
+  } catch (cleanupErr) {
+    console.error('Error cleaning /tmp:', cleanupErr.toString());
+  }
   }
 });
 

@@ -15,7 +15,7 @@ app.post('/extract-text', async (req, res) => {
   try {
 
 let fullText = "hiiiiiiiii";
-    احفظ الـ PDF مؤقتًا
+    //احفظ الـ PDF مؤقتًا
     const tempPdf = path.join('/tmp', 'file.pdf');
     fs.writeFileSync(tempPdf, Buffer.from(req.body.pdf_base64, 'base64'));
      fullText += "to png";

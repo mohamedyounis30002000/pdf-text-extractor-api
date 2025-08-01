@@ -27,17 +27,17 @@ app.post('/extract-text', async (req, res) => {
 
     // اقرأ الصور الناتجة
     const files = fs.readdirSync('/tmp').filter(file => file.startsWith('page') && file.endsWith('.png'));
-    files.sort(); // تأكد إن الصور بترتيب الصفحات
+    // files.sort(); // تأكد إن الصور بترتيب الصفحات
 
-    // OCR لكل صورة
-    let fullText = '';
-    for (const file of files) {
-      const imagePath = path.join('/tmp', file);
-      const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
-      fullText += `\n\n--- Page ${file} ---\n\n` + text;
-    }
+    // // OCR لكل صورة
+    // let fullText = '';
+    // for (const file of files) {
+    //   const imagePath = path.join('/tmp', file);
+    //   const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+    //   fullText += `\n\n--- Page ${file} ---\n\n` + text;
+    // }
 
-    res.json({ text: fullText.trim() || 'OCR could not extract text' });
+    // res.json({ text: fullText.trim() || 'OCR could not extract text' });
 
   } catch (err) {
     console.error('Error:', err.toString());
